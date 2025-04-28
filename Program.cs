@@ -10,10 +10,31 @@ namespace LibraryCacheReader
     {
         static async Task Main(string[] args)
         {
-            HttpClient client = new HttpClient();
+            Console.WriteLine("Attempting to find Library file...");
 
             Guid localLowId = new Guid("A520A1A4-1780-4FF6-BD18-167343C5AF16");
             string path = GetKnownFolderPath(localLowId) + "\\Against Gravity\\Rec Room\\Library";
+
+            while(!File.Exists(path))
+            {
+                Console.WriteLine("Unable to find your Library file! Please drag the file onto this window and press Enter:");
+                string? newPath = Console.ReadLine();
+
+                if (string.IsNullOrEmpty(newPath))
+                {
+                    Console.WriteLine("No path provided!");
+                    continue;
+                }
+
+                if(newPath.StartsWith("\"") && newPath.EndsWith("\""))
+                {
+                    newPath = newPath.Substring(1, newPath.Length - 2);
+                }
+
+                path = newPath;
+            }
+
+            Console.WriteLine($"Found Library file at: {path}\n\n");
 
             string text = Encoding.ASCII.GetString(File.ReadAllBytes(path));
 
@@ -32,6 +53,8 @@ namespace LibraryCacheReader
 
             string renderDirectory = Path.Combine(downloadDirectory, "Renders");
             Directory.CreateDirectory(renderDirectory);
+
+            HttpClient client = new HttpClient();
 
             for (int i = 0; i < urlMatches.Count; i++)
             {
@@ -122,7 +145,7 @@ namespace LibraryCacheReader
             }
 
             await Task.WhenAll(downloadTasks);
-            Console.WriteLine("Downloaded all images.");
+            Console.WriteLine("Downloaded all images! Moving...\n");
 
             // Moves all 2k images to a separate folder as these are usually renders.
             foreach (string filePath in Directory.GetFiles(downloadDirectory, "*.png"))
@@ -138,8 +161,10 @@ namespace LibraryCacheReader
                         string destinationPath = Path.Combine(renderDirectory, Path.GetFileName(filePath));
 
                         if (!File.Exists(destinationPath))
+                        {
                             File.Move(filePath, destinationPath);
-                        Console.WriteLine($"Moved {Path.GetFileName(filePath)} to Renders folder.");
+                            Console.WriteLine($"Moved {Path.GetFileName(filePath)} to Renders folder.");
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -168,8 +193,8 @@ namespace LibraryCacheReader
                     Marshal.FreeCoTaskMem(pszPath);
             }
         }
-        [DllImport("shell32.dll")]
 
+        [DllImport("shell32.dll")]
         static extern int SHGetKnownFolderPath([MarshalAs(UnmanagedType.LPStruct)] Guid rfid, uint dwFlags, IntPtr hToken, out IntPtr pszPath);
     }
 }
